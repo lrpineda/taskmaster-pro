@@ -1,5 +1,25 @@
 var tasks = {};
 
+var auditTask = function(taskEl) {
+  // get date from task element
+  var date = $(taskEl).find("span").text().trim();
+
+  // convert to moment object at 5:00pm
+  var time = moment(date, "L").set("hour", 17);
+
+  // remove any old classes from element
+  $(taskEl).removeClass("list-group-item-warning list-group-item-danger");
+
+  // apply new class if task is near or overdue date
+  if (moment().isAfter(time)) {
+    $(taskEl).addClass("list-group-item-danger");
+  }
+  else if (Math.abs(moment().diff(time, "days")) <= 2) {
+    $(taskEl).addClass("list-group-item-warning");
+  }
+
+};
+
 var createTask = function(taskText, taskDate, taskList) {
   // create elements that make up a task item
   var taskLi = $("<li>").addClass("list-group-item");
@@ -13,9 +33,12 @@ var createTask = function(taskText, taskDate, taskList) {
   // append span and p element to parent li
   taskLi.append(taskSpan, taskP);
 
+  auditTask(taskLi);
 
   // append to ul list on the page
   $("#list-" + taskList).append(taskLi);
+
+
 };
 
 var loadTasks = function() {
@@ -45,6 +68,9 @@ var saveTasks = function() {
   localStorage.setItem("tasks", JSON.stringify(tasks));
 };
 
+
+
+
 $(".list-group").on("click", "p", function() {
   var text = $(this).text().trim();
   var textInput = $("<textarea>").addClass("form-control").val(text);
@@ -67,12 +93,21 @@ $(".list-group").on("click", "span", function() {
   // replace current text with input
   $(this).replaceWith(dateInput);
 
+  // enable jquery ui datepicker
+  dateInput.datepicker({
+    minDate: 1,
+    onClose: function() {
+      // when calendar is closed force a change event on the date input
+      $(this).trigger("change");
+    }
+  });
+
   // automatically focus on new element
   dateInput.trigger("focus");
 });
 
 // value of due date was changed
-$(".list-group").on("blur", "input[type='text']", function() {
+$(".list-group").on("change", "input[type='text']", function() {
   // get current text
   var date = $(this)
     .val()
@@ -100,6 +135,9 @@ $(".list-group").on("blur", "input[type='text']", function() {
 
   // replace current input with span
   $(this).replaceWith(taskSpan);
+
+  // pass task's <li> element to auditTask function
+  auditTask($(taskSpan).closest(".list-group-item"));
 });
 
 
@@ -228,6 +266,10 @@ $("#task-form-modal .btn-primary").click(function() {
 
     saveTasks();
   }
+});
+
+$("#modalDueDate").datepicker({
+  minDate: 1
 });
 
 // remove all tasks
